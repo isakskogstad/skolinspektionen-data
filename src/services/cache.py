@@ -280,7 +280,12 @@ class DiskCache:
     async def get_stats(self) -> dict:
         """Get disk cache statistics."""
         if not self.cache_dir.exists():
-            return {"size": 0, "total_bytes": 0, "entries": []}
+            return {
+                "size": 0,
+                "total_bytes": 0,
+                "cache_dir": str(self.cache_dir),
+                "entries": [],
+            }
 
         entries = []
         total_bytes = 0
