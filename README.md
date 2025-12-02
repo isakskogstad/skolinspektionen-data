@@ -30,7 +30,7 @@ pip install skolinspektionen-data
 ### From Source
 
 ```bash
-git clone https://github.com/civictechsweden/skolinspektionen-data
+git clone https://github.com/isakskogstad/skolinspektionen-data
 cd skolinspektionen-data
 pip install -e ".[dev]"
 ```
