@@ -43,6 +43,18 @@ ALLOWED_CATEGORIES = frozenset([
 # Security: Maximum file size (100 MB)
 MAX_FILE_SIZE = 100 * 1024 * 1024
 
+# Security: Allowed content types for downloads
+ALLOWED_CONTENT_TYPES = frozenset([
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
+    "application/vnd.ms-excel",  # .xls
+    "application/pdf",
+    "application/msword",  # .doc
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
+    "application/octet-stream",  # Generic binary (some servers use this)
+    "text/html",  # For web pages
+    "text/plain",  # For text files
+])
+
 
 def validate_url(url: str, base_url: str) -> str:
     """Validate URL is from allowed domain (SSRF protection).
@@ -70,9 +82,21 @@ def validate_url(url: str, base_url: str) -> str:
     if hostname in ("localhost", "127.0.0.1", "0.0.0.0", "::1"):
         raise ValueError("Private IPs not allowed")
 
-    # Block AWS metadata endpoint and private IP ranges
-    if hostname.startswith("169.254") or hostname.startswith("10.") or hostname.startswith("192.168."):
-        raise ValueError("Private IP ranges blocked")
+    # Block private IP ranges (RFC 1918 + link-local + AWS metadata)
+    if hostname.startswith("169.254"):  # Link-local / AWS metadata
+        raise ValueError("Link-local addresses blocked")
+    if hostname.startswith("10."):  # 10.0.0.0/8
+        raise ValueError("Private IP range blocked")
+    if hostname.startswith("192.168."):  # 192.168.0.0/16
+        raise ValueError("Private IP range blocked")
+    # 172.16.0.0 - 172.31.255.255 (172.16/12)
+    if hostname.startswith("172."):
+        try:
+            second_octet = int(hostname.split(".")[1])
+            if 16 <= second_octet <= 31:
+                raise ValueError("Private IP range blocked")
+        except (IndexError, ValueError):
+            pass
 
     # Whitelist allowed domains
     if not any(hostname == domain or hostname.endswith("." + domain) for domain in ALLOWED_DOMAINS):
@@ -399,6 +423,12 @@ class DataFetcher:
             async with self.rate_limiter.limit(domain):
                 response = await self.client.get(full_url)
                 response.raise_for_status()
+
+                # Security: Validate content-type
+                content_type = response.headers.get("content-type", "").split(";")[0].strip()
+                if content_type and content_type not in ALLOWED_CONTENT_TYPES:
+                    logger.error(f"Blocked content-type '{content_type}' for: {full_url}")
+                    return None
 
                 content = response.content
 

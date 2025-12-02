@@ -2,7 +2,7 @@
 
 import re
 from typing import Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -14,6 +14,61 @@ from .models import Publication, Attachment
 console = Console()
 
 BASE_URL = "https://www.skolinspektionen.se"
+
+# Security: Allowed domains for content fetching (SSRF protection)
+ALLOWED_DOMAINS = frozenset([
+    "skolinspektionen.se",
+    "www.skolinspektionen.se",
+])
+
+
+def validate_url(url: str) -> str:
+    """Validate URL is from allowed domain (SSRF protection).
+
+    Args:
+        url: URL to validate (relative or absolute)
+
+    Returns:
+        Validated absolute URL
+
+    Raises:
+        ValueError: If URL is not from allowed domain or uses blocked IPs
+    """
+    # Convert relative to absolute
+    full_url = url if url.startswith("http") else BASE_URL + url
+    parsed = urlparse(full_url)
+
+    # Block non-HTTP(S) schemes
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Invalid URL scheme: {parsed.scheme}")
+
+    hostname = parsed.hostname or ""
+
+    # Block localhost and loopback
+    if hostname in ("localhost", "127.0.0.1", "0.0.0.0", "::1"):
+        raise ValueError("Private IPs not allowed")
+
+    # Block private IP ranges (RFC 1918 + link-local + AWS metadata)
+    if hostname.startswith("169.254"):  # Link-local
+        raise ValueError("Link-local addresses blocked")
+    if hostname.startswith("10."):  # 10.0.0.0/8
+        raise ValueError("Private IP range blocked")
+    if hostname.startswith("192.168."):  # 192.168.0.0/16
+        raise ValueError("Private IP range blocked")
+    # 172.16.0.0 - 172.31.255.255 (172.16/12)
+    if hostname.startswith("172."):
+        try:
+            second_octet = int(hostname.split(".")[1])
+            if 16 <= second_octet <= 31:
+                raise ValueError("Private IP range blocked")
+        except (IndexError, ValueError):
+            pass
+
+    # Whitelist allowed domains
+    if not any(hostname == domain or hostname.endswith("." + domain) for domain in ALLOWED_DOMAINS):
+        raise ValueError(f"Domain not allowed: {hostname}")
+
+    return full_url
 
 
 class ContentParser:
@@ -47,18 +102,22 @@ class ContentParser:
         - attachments: List of PDF/Excel attachments
         - metadata: Additional metadata (published date, diarienummer, etc.)
         """
-        if not url.startswith("http"):
-            url = BASE_URL + url
+        # Security: Validate URL before fetching (SSRF protection)
+        try:
+            validated_url = validate_url(url)
+        except ValueError as e:
+            console.print(f"[red]URL validation failed for {url}: {e}[/red]")
+            return None
 
         try:
-            response = await self.client.get(url)
+            response = await self.client.get(validated_url)
             response.raise_for_status()
             html = response.text
         except httpx.HTTPError as e:
-            console.print(f"[red]Error fetching {url}: {e}[/red]")
+            console.print(f"[red]Error fetching {validated_url}: {e}[/red]")
             return None
 
-        return self.parse_publication_page(html, url)
+        return self.parse_publication_page(html, validated_url)
 
     def parse_publication_page(self, html: str, source_url: str) -> dict:
         """Parse a publication page HTML into structured content."""

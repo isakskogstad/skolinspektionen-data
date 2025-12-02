@@ -87,6 +87,15 @@ from ..services.models import (
     TILLSYN_CATEGORIES,
     TUI_ASSESSMENT_AREAS,
 )
+from .validation import (
+    validate_string,
+    validate_int,
+    validate_limit,
+    validate_year,
+    validate_url,
+    validate_enum,
+    validate_bool,
+)
 
 # Initialize server
 server = Server("skolinspektionen-data")
@@ -1003,13 +1012,14 @@ async def _search_publications(args: dict) -> list[TextContent]:
     """Search publications with improved relevance ranking."""
     index = await load_index()
 
-    query = args.get("query", "")
-    type_filter = args.get("type")
-    theme_filter = args.get("theme")
-    skolform_filter = args.get("skolform")
-    subject_filter = args.get("subject")
-    year_filter = args.get("year")
-    limit = args.get("limit", 20)
+    # Validate inputs
+    query = validate_string(args.get("query"), max_length=500, default="")
+    type_filter = validate_enum(args.get("type"), set(PUBLICATION_TYPES.keys()))
+    theme_filter = validate_enum(args.get("theme"), set(THEMES.keys()))
+    skolform_filter = validate_enum(args.get("skolform"), set(SKOLFORMER.keys()))
+    subject_filter = validate_enum(args.get("subject"), set(SUBJECTS.keys()))
+    year_filter = validate_year(args.get("year"))
+    limit = validate_limit(args.get("limit"), default=20)
 
     # Apply pre-filters
     publications = index.publications
@@ -1085,9 +1095,10 @@ async def _search_press_releases(args: dict) -> list[TextContent]:
     """Search press releases."""
     index = await load_index()
 
-    query = args.get("query", "")
-    year_filter = args.get("year")
-    limit = args.get("limit", 20)
+    # Validate inputs
+    query = validate_string(args.get("query"), max_length=500, default="")
+    year_filter = validate_year(args.get("year"))
+    limit = validate_limit(args.get("limit"), default=20)
 
     if query:
         results = search_press_releases(
@@ -1145,10 +1156,11 @@ async def _search_press_releases(args: dict) -> list[TextContent]:
 
 async def _get_publication_content(args: dict) -> list[TextContent]:
     """Get full publication content."""
-    url = args.get("url", "")
+    # Validate URL (SSRF protection - defense in depth)
+    url = validate_url(args.get("url"), require_allowed_domain=True)
 
     if not url:
-        return [TextContent(type="text", text="Error: URL is required")]
+        return [TextContent(type="text", text="Error: Valid Skolinspektionen URL is required")]
 
     parser = await get_parser()
     content = await parser.fetch_publication_content(url)
@@ -1180,10 +1192,11 @@ async def _get_publication_content(args: dict) -> list[TextContent]:
 
 async def _get_publication_metadata(args: dict) -> list[TextContent]:
     """Get publication metadata without full content."""
-    url = args.get("url", "")
+    # Validate URL (SSRF protection - defense in depth)
+    url = validate_url(args.get("url"), require_allowed_domain=True)
 
     if not url:
-        return [TextContent(type="text", text="Error: URL is required")]
+        return [TextContent(type="text", text="Error: Valid Skolinspektionen URL is required")]
 
     # Search for the publication in the index
     index = await load_index()
@@ -1437,12 +1450,13 @@ async def _load_skolenkaten_data(
 
 async def _search_skolenkaten(args: dict) -> list[TextContent]:
     """Search Skolenkäten survey results."""
-    query = args.get("query", "")
-    kommun = args.get("kommun")
-    huvudman = args.get("huvudman")
-    respondent_type = args.get("respondent_type")
-    year = args.get("year")
-    limit = args.get("limit", 20)
+    # Validate inputs
+    query = validate_string(args.get("query"), max_length=200, default="")
+    kommun = validate_string(args.get("kommun"), max_length=100, default=None) or None
+    huvudman = validate_string(args.get("huvudman"), max_length=200, default=None) or None
+    respondent_type = validate_enum(args.get("respondent_type"), set(SKOLENKATEN_RESPONDENT_TYPES.keys()))
+    year = validate_year(args.get("year"))
+    limit = validate_limit(args.get("limit"), default=20)
 
     if not query:
         return [TextContent(type="text", text="Error: query is required")]
@@ -1680,8 +1694,9 @@ async def _list_skolenkaten_files(args: dict) -> list[TextContent]:
 
 async def _search_kolada_municipalities(args: dict) -> list[TextContent]:
     """Search for municipalities."""
-    query = args.get("query", "")
-    limit = args.get("limit", 10)
+    # Validate inputs
+    query = validate_string(args.get("query"), max_length=100, default="")
+    limit = validate_limit(args.get("limit"), default=10)
 
     if not query:
         return [TextContent(type="text", text="Error: query is required")]
@@ -1708,8 +1723,9 @@ async def _search_kolada_municipalities(args: dict) -> list[TextContent]:
 
 async def _get_kolada_education_stats(args: dict) -> list[TextContent]:
     """Get education statistics for a municipality."""
-    municipality_id = args.get("municipality_id", "")
-    year = args.get("year")
+    # Validate inputs
+    municipality_id = validate_string(args.get("municipality_id"), max_length=10, default="")
+    year = validate_year(args.get("year"))
 
     if not municipality_id:
         return [TextContent(type="text", text="Error: municipality_id is required")]
@@ -1836,13 +1852,14 @@ async def _load_tillstand_data(year: int | None = None) -> list:
 
 async def _search_tillstand(args: dict) -> list[TextContent]:
     """Search Tillståndsbeslut data."""
-    query = args.get("query")
-    kommun = args.get("kommun")
-    skolform = args.get("skolform")
-    beslutstyp = args.get("beslutstyp")
-    ansokningstyp = args.get("ansokningstyp")
-    year = args.get("year")
-    limit = args.get("limit", 20)
+    # Validate inputs
+    query = validate_string(args.get("query"), max_length=200, default=None) or None
+    kommun = validate_string(args.get("kommun"), max_length=100, default=None) or None
+    skolform = validate_enum(args.get("skolform"), set(TILLSTAND_SKOLFORMER.keys()))
+    beslutstyp = validate_enum(args.get("beslutstyp"), set(TILLSTAND_BESLUT_TYPES.keys()))
+    ansokningstyp = validate_enum(args.get("ansokningstyp"), set(TILLSTAND_ANSOKNINGSTYPER.keys()))
+    year = validate_year(args.get("year"))
+    limit = validate_limit(args.get("limit"), default=20)
 
     # Load data
     all_results = await _load_tillstand_data(year)

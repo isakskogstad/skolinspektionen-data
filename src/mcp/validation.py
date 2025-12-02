@@ -177,9 +177,21 @@ def validate_url(
         if hostname in ("localhost", "127.0.0.1", "0.0.0.0", "::1"):
             return None
 
-        # Block private IP ranges
-        if any(hostname.startswith(prefix) for prefix in ("169.254", "10.", "192.168.", "172.")):
+        # Block private IP ranges (RFC 1918 + link-local)
+        if hostname.startswith("169.254"):  # Link-local
             return None
+        if hostname.startswith("10."):  # 10.0.0.0/8
+            return None
+        if hostname.startswith("192.168."):  # 192.168.0.0/16
+            return None
+        # 172.16.0.0 - 172.31.255.255 (172.16/12)
+        if hostname.startswith("172."):
+            try:
+                second_octet = int(hostname.split(".")[1])
+                if 16 <= second_octet <= 31:
+                    return None
+            except (IndexError, ValueError):
+                pass
 
         # Check allowed domains
         if require_allowed_domain:
