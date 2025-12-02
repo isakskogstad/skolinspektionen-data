@@ -4,22 +4,31 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io/)
 
-Open data from **Skolinspektionen** (Swedish Schools Inspectorate) via the Model Context Protocol (MCP).
+**Samlar in och tillgängliggör data från Skolinspektionen som öppen, strukturerad data.**
 
-## Overview
+## Varför detta projekt?
 
-This project provides structured, AI-accessible data from [Skolinspektionen](https://www.skolinspektionen.se), enabling language models to search, analyze, and reason about Swedish school inspection data.
+[Skolinspektionen](https://www.skolinspektionen.se) är en central myndighet vars beslut och granskningar har betydande inverkan på Sveriges skolor, elever och lärare. Trots detta erbjuder myndigheten inte sina data som öppna data i strukturerat format.
 
-### Key Features
+Detta verktyg syftar till att:
 
-- **Intelligent Search** — BM25 relevance ranking with fuzzy matching for typo tolerance
-- **Skolenkäten** — Survey results from students, parents, and teachers across all Swedish schools
-- **Tillståndsbeslut** — School permit decisions and application outcomes
-- **Tillsyn Statistics** — Inspection statistics including fines (viten), targeted supervision (TUI), and planned inspections
-- **Kolada Integration** — Municipality-level education KPIs from the Swedish municipality database
-- **Publication Archive** — Quality reviews, reports, decisions, and press releases
-- **Smart Caching** — Two-tier memory + disk cache for fast repeated queries
-- **Data Refresh** — CLI tools for automated data updates with delta tracking
+- **Öka transparensen** — Göra myndighetens arbete mer tillgängligt för allmänheten
+- **Möjliggöra granskning** — Underlätta för journalister, forskare och medborgare att analysera beslut och trender
+- **Förbättra digital insyn** — Strukturera information som annars är svår att överblicka
+- **Rusta AI för analys** — Via MCP-servern kan AI-verktyg effektivt söka, analysera och sammanställa data från myndigheten
+
+> *"Offentlighetsprincipen innebär att allmänheten har rätt till insyn i statens och kommunernas verksamhet. Denna insyn bör även omfatta digital tillgång till strukturerad data."*
+
+## Vad samlas in?
+
+| Datakälla | Beskrivning | Omfattning |
+|-----------|-------------|------------|
+| **Publikationer** | Kvalitetsgranskningar, regeringsuppdrag, statistikrapporter | ~2000+ dokument |
+| **Skolenkäten** | Enkätsvar från elever, vårdnadshavare och personal | ~500 000 svar/år |
+| **Tillståndsbeslut** | Beslut om godkännande av fristående skolor | Löpande |
+| **Tillsynsbeslut** | Inspektionsresultat och förelägganden | Löpande |
+| **Vitesstatistik** | Statistik över utdömda viten | Årlig |
+| **Riktad tillsyn** | Individärenden (TUI) och planerad tillsyn | Årlig |
 
 ## Installation
 
@@ -27,7 +36,7 @@ This project provides structured, AI-accessible data from [Skolinspektionen](htt
 pip install skolinspektionen-data
 ```
 
-### From Source
+### Från källkod
 
 ```bash
 git clone https://github.com/isakskogstad/skolinspektionen-data
@@ -35,11 +44,11 @@ cd skolinspektionen-data
 pip install -e ".[dev]"
 ```
 
-## Quick Start
+## Användning
 
-### MCP Integration (Claude Desktop)
+### MCP-integration (Claude Desktop)
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+Med MCP-servern kan AI-assistenter som Claude direkt söka och analysera Skolinspektionens data. Lägg till i din Claude Desktop-konfiguration:
 
 ```json
 {
@@ -51,7 +60,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 }
 ```
 
-Or with `uvx` (no installation required):
+Eller med `uvx` (ingen installation krävs):
 
 ```json
 {
@@ -64,218 +73,144 @@ Or with `uvx` (no installation required):
 }
 ```
 
-### CLI Tools
+### Kommandoradsverktyg
 
 ```bash
-# Refresh all data sources
+# Uppdatera all data
 si-refresh
 
-# Refresh specific sources
+# Uppdatera specifika källor
 si-refresh --sources skolenkaten tillstand
 
-# Check data status
+# Visa datastatus
 si-refresh --status
 
-# Run the MCP server manually
+# Starta MCP-servern manuellt
 si-mcp
 ```
 
-## Available MCP Tools
+## MCP-verktyg
 
-### Publication Search
+### Sök och analys
 
-| Tool | Description |
-|------|-------------|
-| `search_publications` | Search publications with BM25 ranking and filters |
-| `search_press_releases` | Search press releases by query and year |
-| `get_publication_content` | Fetch full publication content as Markdown |
-| `get_publication_metadata` | Get publication metadata (faster than full content) |
+| Verktyg | Beskrivning |
+|---------|-------------|
+| `search_publications` | Sök publikationer med relevansrankning |
+| `search_press_releases` | Sök pressmeddelanden |
+| `get_publication_content` | Hämta fullständigt innehåll som Markdown |
+| `search_skolenkaten` | Sök enkätresultat per skola |
+| `search_tillstand` | Sök tillståndsbeslut |
 
-### Skolenkäten (School Survey)
+### Skolenkäten
 
-| Tool | Description |
-|------|-------------|
-| `search_skolenkaten` | Search survey results by school, municipality, or principal |
-| `get_skolenkaten_summary` | Get aggregated statistics for a school unit |
-| `list_skolenkaten_files` | List available survey data files |
-| `list_skolenkaten_respondent_types` | List respondent categories (students, parents, teachers) |
-| `list_skolenkaten_indices` | List survey index definitions |
+| Verktyg | Beskrivning |
+|---------|-------------|
+| `get_skolenkaten_summary` | Sammanställd statistik för en skolenhet |
+| `list_skolenkaten_respondent_types` | Lista respondenttyper |
+| `list_skolenkaten_indices` | Lista enkätindex och definitioner |
 
-### Tillståndsbeslut (Permit Decisions)
+### Tillstånd och tillsyn
 
-| Tool | Description |
-|------|-------------|
-| `search_tillstand` | Search permit decisions by school, municipality, or type |
-| `get_tillstand_summary` | Get statistics on permit decisions |
-| `list_tillstand_files` | List available permit decision files |
+| Verktyg | Beskrivning |
+|---------|-------------|
+| `get_tillstand_summary` | Statistik över tillståndsbeslut |
+| `get_viten_statistik` | Vitesstatistik från tillsyn |
+| `get_tui_statistik` | Statistik för riktad tillsyn individ |
+| `get_tillsyn_summary` | Samlad tillsynsstatistik |
 
-### Tillsyn Statistics (Inspection Data)
+### Kolada-integration
 
-| Tool | Description |
-|------|-------------|
-| `get_viten_statistik` | Fine statistics from school inspections |
-| `get_tui_statistik` | Targeted individual supervision statistics |
-| `get_planerad_tillsyn_statistik` | Planned inspection statistics |
-| `get_tillsyn_summary` | Combined inspection statistics overview |
+| Verktyg | Beskrivning |
+|---------|-------------|
+| `search_kolada_municipalities` | Sök kommuner |
+| `get_kolada_education_stats` | Utbildnings-KPI:er per kommun |
+| `compare_kolada_municipalities` | Jämför kommuner |
 
-### Kolada Integration (Municipality Data)
+### Referensdata
 
-| Tool | Description |
-|------|-------------|
-| `search_kolada_municipalities` | Search Swedish municipalities |
-| `get_kolada_education_stats` | Get education KPIs for a municipality |
-| `compare_kolada_municipalities` | Compare education data between municipalities |
-| `list_kolada_education_kpis` | List available education indicators |
+| Verktyg | Beskrivning |
+|---------|-------------|
+| `list_publication_types` | Publikationstyper |
+| `list_themes` | Granskningsteman |
+| `list_skolformer` | Skolformer |
+| `list_regions` | Geografiska regioner |
 
-### Reference Data
-
-| Tool | Description |
-|------|-------------|
-| `list_publication_types` | All publication types |
-| `list_themes` | Inspection themes |
-| `list_skolformer` | School types |
-| `list_subjects` | School subjects |
-| `list_decision_types` | Decision categories |
-| `list_regions` | Geographic regions |
-
-### Administration
-
-| Tool | Description |
-|------|-------------|
-| `refresh_data` | Trigger data refresh |
-| `get_refresh_status` | Check refresh status and history |
-| `get_cache_stats` | Cache performance statistics |
-| `health_check` | Service health and data freshness |
-
-## MCP Resources
-
-| Resource URI | Description |
-|--------------|-------------|
-| `skolinspektionen://publication-types` | Publication types as JSON |
-| `skolinspektionen://themes` | Inspection themes as JSON |
-| `skolinspektionen://recent` | 20 most recent publications |
-
-## MCP Prompts
-
-| Prompt | Description |
-|--------|-------------|
-| `analyze_school` | Comprehensive analysis of a school |
-| `compare_schools` | Compare multiple schools |
-| `summarize_publication` | Summarize a publication from URL |
-| `find_school_decisions` | Find inspection decisions for a school |
-
-## Data Sources
-
-| Source | Description | Update Frequency |
-|--------|-------------|------------------|
-| **Publications** | Quality reviews, government reports, statistics | Continuous |
-| **Skolenkäten** | Survey responses from ~500,000 respondents/year | Biannual (spring/fall) |
-| **Tillståndsbeslut** | School permit applications and decisions | Continuous |
-| **Tillsyn** | Inspection fines, TUI, planned inspections | Annual |
-| **Kolada** | Municipality education KPIs via Kolada API | Annual |
-
-## Project Architecture
+## Teknisk arkitektur
 
 ```
 src/
 ├── cli/
-│   └── refresh.py          # Data refresh CLI
-├── config.py               # Configuration (pydantic-settings)
+│   └── refresh.py          # Datauppdatering via kommandorad
 ├── mcp/
-│   ├── server.py           # MCP server with 30+ tools
-│   └── validation.py       # Input validation and sanitization
+│   ├── server.py           # MCP-server med 30+ verktyg
+│   └── validation.py       # Indatavalidering
 ├── search/
 │   └── ranker.py           # BM25 + fuzzy search
 └── services/
-    ├── browser.py          # Headless browser for JS pages
-    ├── cache.py            # Two-tier LRU + disk cache
-    ├── fetcher.py          # Secure file downloader
-    ├── kolada.py           # Kolada API client
-    ├── models.py           # Pydantic data models
-    ├── ombedomning.py      # Re-inspection data parser
-    ├── parser.py           # HTML → Markdown conversion
-    ├── rate_limiter.py     # Token bucket rate limiting
-    ├── refresher.py        # Data refresh orchestration
-    ├── retry.py            # Exponential backoff + circuit breaker
-    ├── scraper.py          # Publication scraper
-    ├── skolenkaten.py      # Survey data parser
-    ├── tillstand.py        # Permit decision parser
-    └── tillsyn_statistik.py # Inspection statistics parser
+    ├── cache.py            # Tvålagers-cache (minne + disk)
+    ├── fetcher.py          # Säker filnedladdning
+    ├── kolada.py           # Kolada API-klient
+    ├── parser.py           # HTML → Markdown
+    ├── refresher.py        # Datauppdatering
+    ├── skolenkaten.py      # Skolenkäten-parser
+    ├── tillstand.py        # Tillståndsbeslut-parser
+    └── tillsyn_statistik.py # Tillsynsstatistik-parser
 ```
 
-## Configuration
+## Säkerhet
 
-Environment variables (or `.env` file):
+Projektet implementerar flera säkerhetsåtgärder:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SI_BASE_URL` | `https://www.skolinspektionen.se` | Base URL |
-| `SI_DATA_DIR` | `~/.skolinspektionen-data` | Data storage directory |
-| `SI_CACHE_TTL_HOURS` | `24` | Cache time-to-live |
-| `SI_RATE_LIMIT` | `2.0` | Requests per second |
-| `SI_LOG_LEVEL` | `INFO` | Logging verbosity |
+- **SSRF-skydd** — URL-validering med domänvitlistning
+- **Indatavalidering** — Alla MCP-verktygsparametrar valideras
+- **Path traversal-skydd** — Filnamn saneras vid nedladdning
+- **Content-type-validering** — Endast tillåtna filtyper accepteras
+- **Rate limiting** — Respektfull datainsamling
 
-## Security
-
-This project implements multiple security measures:
-
-- **SSRF Protection** — URL validation with domain whitelisting
-- **Input Validation** — All MCP tool inputs sanitized and validated
-- **Path Traversal Prevention** — Filename sanitization for downloads
-- **Content-Type Validation** — Only allowed file types accepted
-- **Private IP Blocking** — RFC 1918 and link-local addresses blocked
-- **Rate Limiting** — Respectful scraping with configurable limits
-
-## Development
+## Utveckling
 
 ```bash
-# Install with dev dependencies
+# Installera med utvecklingsberoenden
 pip install -e ".[dev]"
 
-# Run tests (268 tests)
+# Kör tester (268 tester)
 pytest
 
-# Run tests with coverage
+# Kör med täckningsrapport
 pytest --cov=src --cov-report=term-missing
-
-# Type checking
-mypy src/
-
-# Linting
-ruff check src/
 ```
 
-## License
+## Licens
 
-**AGPL-3.0** — See [LICENSE](LICENSE) for details.
+**AGPL-3.0** — Se [LICENSE](LICENSE) för detaljer.
 
-This license ensures that:
-- The software remains free and open source
-- Modifications must be shared under the same license
-- Network use (e.g., as a web service) triggers copyleft provisions
+Denna licens säkerställer att:
+- Mjukvaran förblir fri och öppen källkod
+- Modifieringar måste delas under samma licens
+- Nätverksanvändning (t.ex. som webbtjänst) utlöser copyleft
 
-## Contributing
+## Bidra
 
-This is a **Civic Tech Sweden** project. Contributions are welcome!
+Detta är ett **Civic Tech**-projekt. Bidrag välkomnas!
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes with tests
-4. Ensure all tests pass (`pytest`)
-5. Submit a pull request
+1. Forka repot
+2. Skapa en feature branch
+3. Gör dina ändringar med tester
+4. Säkerställ att alla tester passerar
+5. Skicka en pull request
 
-## Related Projects
+## Relaterade projekt
 
-- [SCB MCP](https://github.com/civictechsweden/scb-mcp) — Statistics Sweden data via MCP
-- [Kolada MCP](https://github.com/civictechsweden/kolada-mcp) — Swedish municipality KPIs via MCP
-- [g0vse](https://github.com/civictechsweden/g0vse) — Swedish government documents via MCP
+- [g0vse](https://github.com/civictechsweden/g0vse) — Öppen data från regeringen.se
+- [SCB MCP](https://github.com/civictechsweden/scb-mcp) — Statistik från SCB via MCP
+- [Kolada MCP](https://github.com/civictechsweden/kolada-mcp) — Kommundata via MCP
 
-## Acknowledgments
+## Tack till
 
-- **Skolinspektionen** for publishing open data
-- **Kolada** for the municipality statistics API
-- **Anthropic** for the Model Context Protocol specification
+- **Skolinspektionen** — för att publicera information på sin webbplats
+- **Kolada** — för API:et med kommunstatistik
+- **Anthropic** — för Model Context Protocol-specifikationen
 
 ---
 
-*Built with care for Swedish education transparency.*
+*Ett civic tech-projekt för ökad transparens i svensk skolinspektion.*
